@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ARCTITAN — Owner Console</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛠️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --plate:#DDE2E6; --panel:#F2F4F6; --well:#E6EAED; --ink:#18263A; --steel:#5B6877; --rule:#B7C0C8;
+  --signal:#F2C230; --on-signal:#18263A; --ok:#1F7A52; --err:#B3261E; --warn:#8A5A00;
+  --display:"Chakra Petch","Arial Narrow",system-ui,sans-serif; --body:"Barlow","Segoe UI",system-ui,sans-serif;
+  --code:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --plate:#111A25; --panel:#182433; --well:#0E1620; --ink:#E4E9EE; --steel:#93A1AF; --rule:#2C3A4B; --ok:#5FC495; --err:#F2837B; --warn:#F2C230;}}
+:root[data-theme="dark"]{--plate:#111A25; --panel:#182433; --well:#0E1620; --ink:#E4E9EE; --steel:#93A1AF; --rule:#2C3A4B; --ok:#5FC495; --err:#F2837B; --warn:#F2C230;}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--plate);color:var(--ink);font:400 16px/1.5 var(--body);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--signal);outline-offset:2px}
+a{color:inherit}
+h1,h2,h3{font-family:var(--display);margin:0}
+.hidden{display:none!important}
+
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:10;background:var(--plate);border-bottom:1px solid var(--rule);
+  display:flex;align-items:center;gap:10px;padding:12px 16px}
+.bar h1{font-size:18px;letter-spacing:.12em;margin-right:auto;flex:1;min-width:0;overflow:hidden;white-space:nowrap}
+@media (max-width:380px){.bar h1{font-size:0}.bar h1::before{content:"🛠";font-size:20px}}
+.chip{display:inline-flex;align-items:center;gap:8px;border:1.5px solid var(--ink);background:transparent;border-radius:4px;padding:7px 11px;font-size:14px;font-weight:600;max-width:40vw;flex:none}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip .lamp{width:9px;height:9px;border-radius:50%;background:var(--steel);flex:none}
+.chip .lamp.ok{background:var(--ok)} .chip .lamp.test{background:var(--signal)}
+
+main{max-width:680px;margin:0 auto;padding:16px 16px 96px}
+.seg{display:grid;grid-template-columns:1fr 1fr;border:1.5px solid var(--ink);border-radius:5px;overflow:hidden;margin-bottom:16px}
+.seg button{border:0;background:transparent;padding:11px;font-weight:600}
+.seg button[aria-selected="true"]{background:var(--ink);color:var(--plate)}
+
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:6px;padding:16px;margin-bottom:14px}
+.card h2{font-size:18px;margin-bottom:4px}
+.lede{margin:0 0 14px;color:var(--steel);font-size:15px}
+
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;
+  border:2px dashed var(--steel);border-radius:6px;padding:28px 16px;background:var(--well);cursor:pointer}
+.drop.over{border-color:var(--signal);background:color-mix(in srgb,var(--signal) 14%,var(--well))}
+.drop strong{font-family:var(--display);font-size:17px}
+.drop small{color:var(--steel)}
+.drop input{display:none}
+
+.file-card{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center;border-left:4px solid var(--ink);padding:4px 0 4px 12px;margin:14px 0}
+.file-card .nm{font:700 20px/1.2 var(--display);word-break:break-all}
+.file-card .meta{grid-column:1;color:var(--steel);font-size:14px}
+.file-card button{grid-row:1/3;grid-column:2}
+
+.btn{border:0;border-radius:4px;padding:11px 16px;font-weight:600;background:var(--well);border:1px solid var(--rule)}
+.btn.small{padding:6px 10px;font-size:14px}
+.btn.primary{width:100%;background:var(--signal);color:var(--on-signal);border:0;font:700 18px/1 var(--display);letter-spacing:.04em;padding:17px;
+  clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px)}
+.btn.primary:disabled{background:var(--rule);color:var(--steel);cursor:not-allowed}
+.btn.write{background:var(--ink);color:var(--plate);border:0}
+.btn.link{background:none;border:0;padding:0;text-decoration:underline;font-weight:500}
+
+.field{margin:12px 0}
+.field label{display:flex;justify-content:space-between;gap:8px;font-size:14px;font-weight:600;margin-bottom:4px}
+.field label em{font-style:normal;font-weight:400;color:var(--steel);font-family:var(--code);font-size:12.5px}
+.field .hint{font-size:13px;color:var(--steel);margin-top:3px}
+.in{width:100%;background:var(--well);border:1px solid var(--rule);border-radius:4px;padding:10px 11px;font-family:var(--code);font-size:14px}
+textarea.in{min-height:70px;resize:vertical}
+.in-row{display:flex;gap:6px}
+.in-row .in{flex:1;min-width:0}
+.in-row select.in{flex:0 0 auto;width:auto}
+.helper{display:flex;gap:6px;margin-top:6px;align-items:center;font-size:13px;color:var(--steel)}
+.helper input{flex:1;min-width:0}
+
+.out{margin-top:10px;padding:10px 12px;border-radius:4px;background:var(--well);border:1px solid var(--rule);font-family:var(--code);font-size:13px;white-space:pre-wrap;word-break:break-all}
+.out.ok{border-color:var(--ok);color:var(--ok)} .out.err{border-color:var(--err);color:var(--err)}
+.out a{color:inherit}
+
+.list{list-style:none;margin:0;padding:0}
+.list li{border-top:1px solid var(--rule)}
+.list li:first-child{border-top:0}
+.list button{display:grid;grid-template-columns:1fr auto;width:100%;text-align:left;background:none;border:0;padding:12px 2px;gap:2px 10px}
+.list .nm{font-weight:600}
+.list .sub{font-family:var(--code);font-size:13px;color:var(--steel)}
+.list .tag{grid-row:1/3;grid-column:2;align-self:center;font-size:13px;color:var(--steel)}
+.empty{color:var(--steel);font-size:15px;margin:4px 0 0}
+
+.ctr-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+.ctr-head .addr{font-family:var(--code);font-size:13px;color:var(--steel);word-break:break-all}
+.fn-search{margin:6px 0 4px}
+.group-title{font:700 15px/1.2 var(--display);margin:18px 0 6px;display:flex;justify-content:space-between;align-items:baseline}
+.group-title small{font:400 13px var(--body);color:var(--steel)}
+details.fn{border:1px solid var(--rule);border-radius:5px;margin-bottom:8px;background:var(--panel)}
+details.fn summary{list-style:none;cursor:pointer;padding:11px 12px;display:flex;align-items:center;gap:8px;font-family:var(--code);font-size:14px;font-weight:600}
+details.fn summary::-webkit-details-marker{display:none}
+details.fn summary::after{content:"+";margin-left:auto;font-size:18px;color:var(--steel)}
+details.fn[open] summary::after{content:"−"}
+details.fn .pay{font:600 11px var(--body);padding:2px 6px;border-radius:3px;background:var(--signal);color:var(--on-signal)}
+details.fn .val{font-weight:400;color:var(--ok);margin-left:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:45%}
+details.fn .body{padding:0 12px 12px}
+
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(10,16,24,.55);display:flex;align-items:flex-end;justify-content:center}
+.sheet .panel{background:var(--panel);width:100%;max-width:560px;max-height:88vh;overflow:auto;border-radius:10px 10px 0 0;
+  padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px))}
+.sheet h2{font-size:19px}
+.sheet .close{float:right}
+.chain-group{font-size:13px;font-weight:600;color:var(--steel);margin:16px 0 4px}
+.warn{background:color-mix(in srgb,var(--signal) 22%,transparent);color:var(--ink);border-left:4px solid var(--signal);padding:10px 12px;border-radius:3px;font-size:14px;margin:12px 0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--plate);
+  padding:10px 16px;border-radius:5px;font-size:14px;z-index:30;max-width:90vw}
+@media (min-width:700px){.sheet{align-items:center}.sheet .panel{border-radius:10px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <h1>CONSOLE</h1>
+  <button class="chip" id="chainChip" aria-haspopup="dialog"><i class="lamp" id="chainLamp"></i><span id="chainName">Choose network</span></button>
+  <button class="chip" id="walletChip"><span id="walletText">Connect wallet</span></button>
+</header>
+
+<main>
+  <div class="seg" role="tablist">
+    <button role="tab" id="tabDeploy" aria-selected="true">Deploy</button>
+    <button role="tab" id="tabManage" aria-selected="false">My contracts</button>
+  </div>
+
+  <!-- DEPLOY -->
+  <section id="viewDeploy">
+    <div class="card">
+      <h2>Deploy a contract</h2>
+      <p class="lede">Upload the contract file I give you. It deploys to whichever network your wallet is on.</p>
+      <label class="drop" id="deployDrop">
+        <strong>Drop the contract file here</strong>
+        <small>or tap to choose · .json (package, Hardhat, Foundry, Remix), or ABI + .bin together</small>
+        <input type="file" id="deployFile" multiple>
+      </label>
+
+      <div id="deployLoaded" class="hidden">
+        <div class="file-card">
+          <span class="nm" id="dName"></span>
+          <span class="meta" id="dMeta"></span>
+          <button class="btn small" id="dClear">Change file</button>
+        </div>
+        <div id="ctorFields"></div>
+        <div id="deployWarn"></div>
+        <button class="btn primary" id="deployBtn">Deploy</button>
+        <div class="out hidden" id="deployOut"></div>
+        <div id="deployDone" class="hidden" style="margin-top:12px">
+          <button class="btn write" id="openDeployed">Open this contract</button>
+          <button class="btn" id="downloadDeployed">Save contract file</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MANAGE -->
+  <section id="viewManage" class="hidden">
+    <div class="card" id="pickCard">
+      <h2>My contracts</h2>
+      <p class="lede">Contracts you deployed or opened here, on the current network.</p>
+      <ul class="list" id="savedList"></ul>
+      <p class="empty hidden" id="savedEmpty">Nothing saved for this network yet.</p>
+    </div>
+
+    <div class="card" id="openCard">
+      <h2>Open a contract</h2>
+      <p class="lede">Upload a saved contract file, or upload the contract file and paste its address.</p>
+      <label class="drop" id="openDrop">
+        <strong>Drop the contract file here</strong>
+        <small>or tap to choose</small>
+        <input type="file" id="openFile" multiple>
+      </label>
+      <div id="openNeedsAddr" class="hidden">
+        <div class="file-card"><span class="nm" id="oName"></span><span class="meta" id="oMeta"></span></div>
+        <div class="field">
+          <label for="oAddr">Contract address</label>
+          <input class="in" id="oAddr" placeholder="0x…" autocomplete="off" spellcheck="false">
+        </div>
+        <button class="btn write" id="oOpen">Open contract</button>
+      </div>
+    </div>
+
+    <div id="ctrView" class="hidden">
+      <div class="card">
+        <div class="ctr-head">
+          <div>
+            <h2 id="cName"></h2>
+            <div class="addr" id="cAddr"></div>
+          </div>
+          <button class="btn small" id="cBack">Close</button>
+        </div>
+        <div class="in-row">
+          <button class="btn small" id="cExplorer">View on explorer</button>
+          <button class="btn small" id="cDownload">Save contract file</button>
+          <button class="btn small" id="cForget">Remove</button>
+        </div>
+        <input class="in fn-search" id="fnSearch" placeholder="Find a function, e.g. withdraw" autocomplete="off">
+        <div class="group-title">Change something <small>needs your signature</small></div>
+        <div id="writeList"></div>
+        <div class="group-title">Look up <small>free, no signature</small></div>
+        <div id="readList"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- NETWORK SHEET -->
+<div class="sheet hidden" id="netSheet" role="dialog" aria-modal="true" aria-labelledby="netTitle">
+  <div class="panel">
+    <button class="btn small close" id="netClose">Done</button>
+    <h2 id="netTitle">Network</h2>
+    <p class="lede" id="netCurrent" style="margin-top:4px"></p>
+    <div class="field">
+      <input class="in" id="netSearch" placeholder="Search any EVM chain by name or ID" autocomplete="off">
+      <div class="hint" id="netSearchHint">Searching the full list loads every public chain.</div>
+    </div>
+    <div id="netResults"></div>
+    <div id="netPresets"></div>
+    <div class="chain-group">Add a chain by hand</div>
+    <div class="field"><label>Name</label><input class="in" id="cuName" placeholder="Arc Mainnet"></div>
+    <div class="field"><label>Chain ID</label><input class="in" id="cuId" inputmode="numeric" placeholder="e.g. 5042002"></div>
+    <div class="field"><label>RPC URL</label><input class="in" id="cuRpc" placeholder="https://…"></div>
+    <div class="field"><label>Gas token symbol</label><input class="in" id="cuSym" placeholder="ETH / USDC"></div>
+    <div class="field"><label>Explorer URL <em>optional</em></label><input class="in" id="cuExp" placeholder="https://…"></div>
+    <button class="btn write" id="cuAdd">Add and switch</button>
+  </div>
+</div>
+
+<div class="toast hidden" id="toast" role="status"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script>
+/* ============================================================
+   Networks. Anything not listed can be found with "Search" or
+   added by hand; the console always works on the wallet's
+   current network.
+   ============================================================ */
+const PRESETS = [
+  { id:5042002,  name:"Arc Testnet",       symbol:"USDC", rpc:"https://rpc.testnet.arc.network",            explorer:"https://testnet.arcscan.app", testnet:true },
+  { id:4663,     name:"Robinhood Chain",   symbol:"ETH",  rpc:"https://rpc.mainnet.chain.robinhood.com",    explorer:"https://robinhoodchain.blockscout.com" },
+  { id:46630,    name:"Robinhood Chain Testnet", symbol:"ETH", rpc:"https://rpc.testnet.chain.robinhood.com", explorer:"", testnet:true },
+  { id:1,        name:"Ethereum",          symbol:"ETH",  rpc:"https://ethereum-rpc.publicnode.com",        explorer:"https://etherscan.io" },
+  { id:11155111, name:"Sepolia",           symbol:"ETH",  rpc:"https://ethereum-sepolia-rpc.publicnode.com",explorer:"https://sepolia.etherscan.io", testnet:true },
+  { id:8453,     name:"Base",              symbol:"ETH",  rpc:"https://mainnet.base.org",                   explorer:"https://basescan.org" },
+  { id:84532,    name:"Base Sepolia",      symbol:"ETH",  rpc:"https://sepolia.base.org",                   explorer:"https://sepolia.basescan.org", testnet:true },
+  { id:42161,    name:"Arbitrum One",      symbol:"ETH",  rpc:"https://arb1.arbitrum.io/rpc",               explorer:"https://arbiscan.io" },
+  { id:10,       name:"OP Mainnet",        symbol:"ETH",  rpc:"https://mainnet.optimism.io",                explorer:"https://optimistic.etherscan.io" },
+  { id:137,      name:"Polygon",           symbol:"POL",  rpc:"https://polygon-rpc.com",                    explorer:"https://polygonscan.com" },
+  { id:56,       name:"BNB Smart Chain",   symbol:"BNB",  rpc:"https://bsc-dataseed.bnbchain.org",          explorer:"https://bscscan.com" },
+  { id:43114,    name:"Avalanche C-Chain", symbol:"AVAX", rpc:"https://api.avax.network/ext/bc/C/rpc",      explorer:"https://snowtrace.io" }
+];
+const CHAINLIST_URL = "https://chainid.network/chains.json";
+
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d){ try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+const W = { provider:null, signer:null, account:null, chainId:null };
+let chainlist = null;
+
+/* ---------- chain helpers ---------- */
+function allKnown(){ return [...store.get("console.customChains", []), ...PRESETS]; }
+function chainInfo(id){
+  const c = allKnown().find(x => x.id === id);
+  if (c) return c;
+  const cl = chainlist && chainlist.find(x => x.id === id);
+  return cl || { id, name:`Chain ${id}`, symbol:"native token", rpc:"", explorer:"" };
+}
+const isTestnet = c => !!c.testnet || /test|sepolia|goerli|holesky|devnet|fuji|amoy/i.test(c.name);
+function explorerUrl(kind, val, chainId = W.chainId){
+  const c = chainInfo(chainId); if (!c.explorer) return null;
+  return `${c.explorer.replace(/\/$/,"")}/${kind}/${val}`;
+}
+const short = a => a ? a.slice(0,6)+"…"+a.slice(-4) : "";
+async function autoRegisterChain(id){
+  // The wallet's current chain is always usable as-is (deploy/calls go through
+  // the wallet's own connection). This just fills in a proper name/explorer
+  // for chains that aren't in the built-in list, so nothing has to be typed
+  // in by hand.
+  if (allKnown().some(c => c.id === id)) return;
+  try{
+    const list = await loadChainlist();
+    const hit = list.find(c => c.id === id);
+    if (!hit) return;
+    const cur = store.get("console.customChains", []).filter(c => c.id !== id);
+    store.set("console.customChains", [{ ...hit, testnet:isTestnet(hit) }, ...cur]);
+    if (W.chainId === id){ renderTop(); renderSaved(); }
+    if (!$("netSheet").classList.contains("hidden")) renderNetSheet();
+  } catch(e){ /* offline or blocked — the chain still works, it just shows as "Chain <id>" */ }
+}
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.remove("hidden"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.add("hidden"), Math.max(2600, msg.length*60)); }
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+/* ---------- wallet ---------- */
+async function connect(){
+  if (!window.ethereum){
+    if (/Android|iPhone|iPad/i.test(navigator.userAgent)){ location.href = `https://metamask.app.link/dapp/${location.host}${location.pathname}`; return; }
+    toast("No wallet found. Install MetaMask, then reload."); return;
+  }
+  const accts = await window.ethereum.request({ method:"eth_requestAccounts" });
+  W.provider = new ethers.BrowserProvider(window.ethereum, "any");
+  W.signer = await W.provider.getSigner();
+  W.account = accts[0];
+  W.chainId = Number(await window.ethereum.request({ method:"eth_chainId" }));
+  renderTop(); renderSaved(); renderDeployWarn(); refreshQuick();
+  autoRegisterChain(W.chainId);
+}
+if (window.ethereum){
+  window.ethereum.on?.("accountsChanged", a => {
+    W.account = a[0] || null;
+    if (W.account) connect().catch(()=>{}); else { W.signer = null; renderTop(); }
+  });
+  window.ethereum.on?.("chainChanged", async id => {
+    W.chainId = Number(id);
+    W.provider = new ethers.BrowserProvider(window.ethereum, "any");
+    if (W.account){ try { W.signer = await W.provider.getSigner(); } catch { W.signer = null; } }
+    renderTop(); renderSaved(); renderDeployWarn();
+    if (current && current.chainId !== W.chainId) closeContract(); else refreshQuick();
+    autoRegisterChain(W.chainId);
+  });
+  window.ethereum.request({ method:"eth_accounts" }).then(a => { if (a.length) connect().catch(()=>{}); }).catch(()=>{});
+}
+async function ensureWallet(){ if (!W.signer) await connect(); if (!W.signer) throw new Error("Connect your wallet first."); }
+
+async function switchTo(c){
+  if (!window.ethereum){ toast("No wallet found."); return; }
+  const hex = "0x" + c.id.toString(16);
+  try{
+    await window.ethereum.request({ method:"wallet_switchEthereumChain", params:[{ chainId:hex }] });
+  } catch(e){
+    const code = e.code ?? e?.data?.originalError?.code;
+    if (code === 4001){ toast("You cancelled the network switch."); return; }
+    if (code !== 4902 && !/unrecognized|not been added|unknown chain/i.test(e.message || "")){ toast(e.message || "Couldn't switch network."); return; }
+    if (!c.rpc){ toast("This chain has no RPC URL. Add it by hand below."); return; }
+    try { await window.ethereum.request({ method:"wallet_addEthereumChain", params:[{
+      chainId:hex, chainName:c.name, nativeCurrency:{ name:c.symbol, symbol:c.symbol, decimals:18 },
+      rpcUrls:[c.rpc], ...(c.explorer ? { blockExplorerUrls:[c.explorer] } : {})
+    }]}); } catch(err){ toast(err.code === 4001 ? "You cancelled adding the network." : (err.message || "Couldn't add the network.")); return; }
+  }
+  W.chainId = Number(await window.ethereum.request({ method:"eth_chainId" }));
+  renderTop(); renderSaved(); renderNetSheet();
+}
+
+function renderTop(){
+  $("walletText").textContent = W.account ? short(W.account) : "Connect wallet";
+  if (W.chainId){
+    const c = chainInfo(W.chainId);
+    $("chainName").textContent = c.name;
+    $("chainLamp").className = "lamp " + (isTestnet(c) ? "test" : "ok");
+  } else { $("chainName").textContent = "Choose network"; $("chainLamp").className = "lamp"; }
+}
+$("walletChip").onclick = () => connect().catch(e => toast(e.message));
+
+/* ---------- network sheet ---------- */
+$("chainChip").onclick = () => { $("netSheet").classList.remove("hidden"); renderNetSheet(); };
+$("netClose").onclick = () => $("netSheet").classList.add("hidden");
+$("netSheet").onclick = e => { if (e.target.id === "netSheet") $("netSheet").classList.add("hidden"); };
+document.addEventListener("keydown", e => { if (e.key === "Escape") $("netSheet").classList.add("hidden"); });
+
+function chainRow(c){
+  const on = c.id === W.chainId;
+  return `<li><button data-chain="${c.id}"><span class="nm">${esc(c.name)}</span><span class="sub">ID ${c.id} · gas in ${esc(c.symbol)}</span><span class="tag">${on ? "Connected" : isTestnet(c) ? "Testnet" : ""}</span></button></li>`;
+}
+function renderNetSheet(){
+  $("netCurrent").textContent = W.chainId ? `Your wallet is on ${chainInfo(W.chainId).name}. Pick another to switch.` : "Connect your wallet, then pick a network.";
+  const custom = store.get("console.customChains", []);
+  const main = PRESETS.filter(c => !isTestnet(c)), test = PRESETS.filter(isTestnet);
+  $("netPresets").innerHTML =
+    (custom.length ? `<div class="chain-group">Your other networks</div><ul class="list">${custom.map(chainRow).join("")}</ul>` : "") +
+    `<div class="chain-group">Mainnets</div><ul class="list">${main.map(chainRow).join("")}</ul>` +
+    `<div class="chain-group">Testnets</div><ul class="list">${test.map(chainRow).join("")}</ul>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-chain]"); if (!b) return;
+  const id = Number(b.dataset.chain);
+  const c = allKnown().find(x => x.id === id) || (chainlist || []).find(x => x.id === id);
+  if (c) switchTo(c).catch(err => toast(err.message));
+});
+
+let searchTimer;
+$("netSearch").oninput = () => { clearTimeout(searchTimer); searchTimer = setTimeout(runSearch, 250); };
+async function loadChainlist(){
+  if (chainlist) return chainlist;
+  $("netSearchHint").textContent = "Loading the public chain list…";
+  const res = await fetch(CHAINLIST_URL);
+  const raw = await res.json();
+  chainlist = raw.map(r => ({
+    id:r.chainId, name:r.name, symbol:r.nativeCurrency?.symbol || "ETH",
+    rpc:(r.rpc || []).find(u => u.startsWith("https://") && !u.includes("${")) || "",
+    explorer:(r.explorers && r.explorers[0] && r.explorers[0].url) || ""
+  }));
+  $("netSearchHint").textContent = `${chainlist.length} public chains available.`;
+  return chainlist;
+}
+async function runSearch(){
+  const q = $("netSearch").value.trim().toLowerCase();
+  if (!q){ $("netResults").innerHTML = ""; $("netPresets").classList.remove("hidden"); return; }
+  $("netPresets").classList.add("hidden");
+  try{
+    const list = await loadChainlist();
+    const hits = [...allKnown(), ...list].filter((c,i,arr) => arr.findIndex(x => x.id===c.id) === i)
+      .filter(c => c.name.toLowerCase().includes(q) || String(c.id) === q).slice(0,25);
+    $("netResults").innerHTML = hits.length ? `<ul class="list">${hits.map(chainRow).join("")}</ul>` : `<p class="empty">No chain matches “${esc(q)}”. Add it by hand below.</p>`;
+  } catch(e){
+    $("netSearchHint").textContent = "Couldn't load the chain list. Add the chain by hand below.";
+  }
+}
+$("cuAdd").onclick = () => {
+  const c = { id:Number($("cuId").value), name:$("cuName").value.trim(), rpc:$("cuRpc").value.trim(),
+    symbol:$("cuSym").value.trim() || "ETH", explorer:$("cuExp").value.trim() };
+  if (!c.id || !c.name || !c.rpc.startsWith("http")){ toast("Fill in name, chain ID and an https RPC URL."); return; }
+  c.testnet = isTestnet(c);
+  const list = store.get("console.customChains", []).filter(x => x.id !== c.id);
+  store.set("console.customChains", [c, ...list]);
+  switchTo(c).catch(e => toast(e.message));
+};
+
+/* ---------- file parsing ---------- */
+function readText(file){ return new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsText(file); }); }
+function normBytecode(b){
+  if (!b) return null;
+  if (typeof b === "object") b = b.object || b.bytecode || null;
+  if (typeof b !== "string") return null;
+  b = b.trim(); if (!b || b === "0x") return null;
+  return b.startsWith("0x") ? b : "0x" + b;
+}
+async function parseFiles(files){
+  const out = { name:null, abi:null, bytecode:null, address:null, chainId:null };
+  for (const f of files){
+    const text = (await readText(f)).trim();
+    const base = f.name.replace(/\.(json|abi|bin|txt)$/i, "").replace(/\.deploy$/i,"");
+    if (/pragma\s+solidity/.test(text)) throw new Error(`${f.name} is Solidity source code. Upload the compiled .json contract file instead.`);
+    let j = null; try { j = JSON.parse(text); } catch {}
+    if (j === null || typeof j !== "object"){
+      if (/^(0x)?[0-9a-fA-F]+$/.test(text)){ out.bytecode = normBytecode(text); out.name ||= base; continue; }
+      throw new Error(`${f.name} isn't a contract file I can read.`);
+    }
+    if (Array.isArray(j)){ out.abi = j; out.name ||= base; continue; }
+    const abi = j.abi || j.output?.abi || (j.metadata?.output?.abi);
+    if (abi) out.abi = typeof abi === "string" ? JSON.parse(abi) : abi;
+    const bc = normBytecode(j.bytecode) || normBytecode(j.evm?.bytecode) || normBytecode(j.data?.bytecode);
+    if (bc) out.bytecode = bc;
+    if (j.constructorArgs) out.defaults = j.constructorArgs;
+    if (j.description) out.description = j.description;
+    if (j.address) out.address = j.address;
+    if (j.chainId) out.chainId = Number(j.chainId);
+    out.name = j.contractName || j.name || out.name || base;
+  }
+  if (!out.abi || !Array.isArray(out.abi)) throw new Error("No ABI found in that file. Upload the full contract file.");
+  if (out.bytecode && /__\$[0-9a-fA-F]{34}\$__/.test(out.bytecode)) throw new Error("This bytecode still needs linked libraries, so it can't be deployed as-is.");
+  if (out.bytecode && !/^0x[0-9a-fA-F]*$/.test(out.bytecode)) throw new Error("The bytecode in that file is damaged. Ask for a fresh contract file.");
+  return out;
+}
+function wireDrop(dropEl, inputEl, handler){
+  inputEl.onchange = () => { if (inputEl.files.length) handler([...inputEl.files]); inputEl.value = ""; };
+  ["dragenter","dragover"].forEach(ev => dropEl.addEventListener(ev, e => { e.preventDefault(); dropEl.classList.add("over"); }));
+  ["dragleave","drop"].forEach(ev => dropEl.addEventListener(ev, e => { e.preventDefault(); dropEl.classList.remove("over"); }));
+  dropEl.addEventListener("drop", e => { if (e.dataTransfer.files.length) handler([...e.dataTransfer.files]); });
+}
+
+/* ---------- inputs ---------- */
+const TIME_RE = /time|start|end|deadline|opens|closes/i;
+const AMOUNT_RE = /price|cost|fee|amount|value|wei/i;
+function inputField(inp, key, idx){
+  const label = inp.name || `input ${idx+1}`;
+  const t = inp.type;
+  const attrs = `data-k="${key}" data-i="${idx}" data-type="${esc(t)}"`;
+  let control, hint = "";
+  if (t === "bool"){
+    control = `<select class="in" ${attrs}><option value="false">false</option><option value="true">true</option></select>`;
+  } else if (t === "address"){
+    control = `<div class="in-row"><input class="in" ${attrs} placeholder="0x…" spellcheck="false" autocomplete="off"><button type="button" class="btn small" data-me="${key}:${idx}">My wallet</button></div>`;
+  } else if (t.endsWith("]") || t.startsWith("tuple")){
+    control = `<textarea class="in" ${attrs} spellcheck="false" placeholder='["value1","value2"]'></textarea>`;
+    hint = t.startsWith("tuple") ? "Enter as JSON." : "One per line, comma-separated, or a JSON list.";
+  } else if (/^u?int/.test(t)){
+    if (AMOUNT_RE.test(label)){
+      control = `<div class="in-row"><input class="in" ${attrs} inputmode="decimal" placeholder="0" autocomplete="off">
+        <select class="in" data-unit="${key}:${idx}"><option value="18">token amount (18 decimals)</option><option value="6">token amount (6 decimals)</option><option value="0">raw number</option></select></div>`;
+      hint = "For 2 USDC, type 2 and keep “token amount”. Pick the decimals the contract uses.";
+    } else {
+      control = `<input class="in" ${attrs} inputmode="numeric" placeholder="0" autocomplete="off">`;
+      if (TIME_RE.test(label)){
+        control += `<div class="helper">Pick a date: <input class="in" type="datetime-local" data-time="${key}:${idx}"></div>`;
+        hint = "Unix time in seconds (the date picker fills this in, in your local time zone).";
+      } else hint = "Whole number.";
+    }
+  } else if (/^bytes\d+$/.test(t)){
+    control = `<input class="in" ${attrs} placeholder="0x…" spellcheck="false" autocomplete="off">`;
+    hint = `Hex value, ${Number(t.slice(5))*2} characters after 0x.`;
+  } else {
+    control = `<input class="in" ${attrs} placeholder="${esc(t)}" spellcheck="false" autocomplete="off">`;
+  }
+  return `<div class="field"><label>${esc(label)} <em>${esc(t)}</em></label>${control}${hint ? `<div class="hint">${hint}</div>` : ""}</div>`;
+}
+document.addEventListener("input", e => {
+  const d = e.target.closest("[data-time]"); if (!d || !d.value) return;
+  const [k,i] = d.dataset.time.split(":");
+  document.querySelector(`[data-k="${k}"][data-i="${i}"]`).value = String(Math.floor(new Date(d.value).getTime()/1000));
+});
+function valueField(key){
+  const sym = W.chainId ? chainInfo(W.chainId).symbol : "native token";
+  return `<div class="field"><label>Amount to send <em>${esc(sym)}</em></label><input class="in" data-v="${key}" inputmode="decimal" placeholder="0"><div class="hint">In ${esc(sym)}, e.g. 1.5</div></div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-me]"); if (!b) return;
+  const [k,i] = b.dataset.me.split(":");
+  const el = document.querySelector(`[data-k="${k}"][data-i="${i}"]`);
+  if (W.account) el.value = ethers.getAddress(W.account); else toast("Connect your wallet first.");
+});
+function coerce(type, raw){
+  raw = (raw ?? "").trim();
+  if (type === "bool"){ if (!/^(true|false|1|0)$/i.test(raw)) throw new Error("use true or false."); return /^(true|1)$/i.test(raw); }
+  const arr = type.match(/^(.*)\[\d*\]$/);
+  if (arr && !arr[1].startsWith("tuple")){
+    if (!raw) return [];
+    const items = raw.startsWith("[") ? JSON.parse(raw) : raw.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+    return items.map(x => typeof x === "string" ? coerce(arr[1], x) : x);
+  }
+  if (type.startsWith("tuple")){ if (!raw) throw new Error("enter a JSON value."); return JSON.parse(raw); }
+  if (/^u?int/.test(type)){
+    const clean = raw.replace(/[,_\s]/g, "");
+    if (!/^-?\d+$/.test(clean)) throw new Error(`“${raw || "empty"}” isn't a whole number.`);
+    if (type.startsWith("u") && clean.startsWith("-")) throw new Error("can't be negative.");
+    return BigInt(clean);
+  }
+  if (type === "address"){ if (!ethers.isAddress(raw)) throw new Error(`“${raw || "empty"}” isn't a valid address.`); return ethers.getAddress(raw.toLowerCase()); }
+  const bn = type.match(/^bytes(\d+)$/);
+  if (bn){ if (!ethers.isHexString(raw, Number(bn[1]))) throw new Error(`needs 0x followed by ${Number(bn[1])*2} hex characters.`); return raw; }
+  if (type === "bytes"){ if (!ethers.isHexString(raw)) throw new Error("needs a 0x hex value."); return raw; }
+  return raw;
+}
+function collect(key, inputs){
+  return inputs.map((inp, i) => {
+    const el = document.querySelector(`[data-k="${key}"][data-i="${i}"]`);
+    try {
+      const unit = document.querySelector(`[data-unit="${key}:${i}"]`);
+      if (unit && unit.value !== "0"){
+        const v = el.value.trim().replace(/,/g, "");
+        if (!/^\d+(\.\d+)?$/.test(v)) throw new Error(`“${el.value || "empty"}” isn't an amount.`);
+        return ethers.parseUnits(v, Number(unit.value));
+      }
+      return coerce(inp.type, el.value);
+    }
+    catch(e){ throw new Error(`${inp.name || "Input " + (i+1)}: ${e.message.replace(/ \(.*$/, "")}`); }
+  });
+}
+function collectValue(key){
+  const el = document.querySelector(`[data-v="${key}"]`);
+  if (!el || !el.value.trim()) return undefined;
+  const v = el.value.trim().replace(/,/g, "");
+  if (!/^\d+(\.\d+)?$/.test(v)) throw new Error(`Amount to send: “${el.value}” isn't an amount.`);
+  return ethers.parseUnits(v, 18);
+}
+
+/* ---------- errors & output ---------- */
+function errText(e, iface, ctx){
+  const code = e?.code, inner = e?.info?.error?.code;
+  if (code === "ACTION_REJECTED" || code === 4001 || inner === 4001) return "You cancelled it in your wallet.";
+  if (code === "INSUFFICIENT_FUNDS" || /insufficient funds/i.test(e?.message || "")) return `Not enough ${chainInfo(W.chainId).symbol} in this wallet for gas (and any amount sent).`;
+  if (code === "NETWORK_ERROR" || /could not detect network|failed to fetch/i.test(e?.message || "")) return "Couldn't reach the network. Check your connection and try again.";
+  let name = e?.revert?.name, args = e?.revert?.args;
+  if (!name && iface && e?.data){ try { const p = iface.parseError(e.data); name = p?.name; args = p?.args; } catch {} }
+  if (name === "Error" && args && args.length) return `The contract refused: ${args[0]}`;
+  if (name === "Panic"){
+    const PANIC = { "17":"a number went out of range", "18":"division by zero", "50":"an index was out of range", "1":"an internal check failed" };
+    return `The contract stopped: ${PANIC[String(args?.[0])] || "internal error"}.`;
+  }
+  if (name) return `The contract refused: ${name}${args && args.length ? " (" + [...args].map(String).join(", ") + ")" : ""}.`;
+  if (e?.reason) return `The contract refused: ${e.reason}`;
+  const raw = (e?.info?.error?.message || e?.message || "");
+  if (/invalid opcode|missing revert data/i.test(raw) && ctx === "deploy")
+    return "The network rejected this contract. Its code may use features this chain doesn't support yet, or a setup value is wrong. Send me the network name and I'll rebuild the file for it.";
+  if (/missing revert data/i.test(raw)) return "The contract refused this call without giving a reason. Check the values and that you're using the owner wallet.";
+  return (e?.shortMessage || e?.message || String(e)).slice(0, 220);
+}
+function fmtOut(v){
+  const norm = x => typeof x === "bigint" ? x.toString()
+    : (x && typeof x === "object" && typeof x.length === "number") ? [...x].map(norm) : x;
+  const n = norm(v);
+  if (Array.isArray(n)) return n.length === 1 && !Array.isArray(n[0]) ? String(n[0]) : JSON.stringify(n);
+  return String(n);
+}
+function show(el, kind, html){ el.className = "out " + kind; el.innerHTML = html; el.classList.remove("hidden"); }
+function txLink(hash){ const u = explorerUrl("tx", hash); return u ? `<a href="${u}" target="_blank" rel="noopener">View transaction</a>` : `tx ${hash}`; }
+
+/* ---------- DEPLOY ---------- */
+let pkg = null, lastDeployed = null;
+wireDrop($("deployDrop"), $("deployFile"), async files => {
+  try{
+    pkg = await parseFiles(files);
+    if (!pkg.bytecode) throw new Error("That file has an ABI but no bytecode. Upload the full contract file, or the .bin file together with it.");
+    const ctor = pkg.abi.find(x => x.type === "constructor");
+    pkg.ctorInputs = ctor ? ctor.inputs : [];
+    pkg.payableCtor = ctor && ctor.stateMutability === "payable";
+    $("dName").textContent = pkg.name || "Contract";
+    const nFns = pkg.abi.filter(x => x.type === "function").length;
+    $("dMeta").textContent = `${nFns} functions · ${pkg.ctorInputs.length ? pkg.ctorInputs.length + " setup values" : "no setup values"}`;
+    $("ctorFields").innerHTML = pkg.ctorInputs.map((inp,i) => inputField(inp, "ctor", i)).join("") + (pkg.payableCtor ? valueField("ctor") : "");
+    // Prefill setup values that come inside the contract file
+    if (pkg.defaults) pkg.ctorInputs.forEach((inp,i) => {
+      const v = Array.isArray(pkg.defaults) ? pkg.defaults[i] : pkg.defaults[inp.name];
+      if (v === undefined) return;
+      const el = document.querySelector(`[data-k="ctor"][data-i="${i}"]`);
+      if (el) el.value = typeof v === "object" ? JSON.stringify(v) : String(v);
+      const unit = document.querySelector(`[data-unit="ctor:${i}"]`);
+      if (unit) unit.value = "0"; // values inside the contract file are exact raw numbers
+    });
+    if (pkg.description) $("dMeta").textContent += " · " + pkg.description;
+    $("deployDrop").classList.add("hidden"); $("deployLoaded").classList.remove("hidden");
+    $("deployOut").classList.add("hidden"); $("deployDone").classList.add("hidden");
+    renderDeployWarn();
+  } catch(e){ toast(e.message); }
+});
+$("dClear").onclick = () => { pkg = null; $("deployLoaded").classList.add("hidden"); $("deployDrop").classList.remove("hidden"); };
+function renderDeployWarn(){
+  if (!pkg) return;
+  const c = W.chainId ? chainInfo(W.chainId) : null;
+  $("deployBtn").textContent = c ? `Deploy to ${c.name}` : "Connect wallet to deploy";
+  $("deployWarn").innerHTML = c && !isTestnet(c)
+    ? `<div class="warn">${esc(c.name)} is a live network. Deploying spends real ${esc(c.symbol)} and the code can't be changed afterwards.</div>` : "";
+}
+$("deployBtn").onclick = async () => {
+  const out = $("deployOut"), btn = $("deployBtn");
+  if (!pkg || btn.disabled) return;
+  try{
+    await ensureWallet(); renderDeployWarn();
+    const chainId = W.chainId, c = chainInfo(chainId);
+    const args = collect("ctor", pkg.ctorInputs);
+    const value = pkg.payableCtor ? collectValue("ctor") : undefined;
+    btn.disabled = true;
+    const factory = new ethers.ContractFactory(pkg.abi, pkg.bytecode, W.signer);
+    show(out, "", "Checking…");
+    const req = await factory.getDeployTransaction(...args, ...(value !== undefined ? [{ value }] : []));
+    // Validate with eth_call, not eth_estimateGas: some networks don't return
+    // decodable revert data for a gas estimate, but do for a plain call — so
+    // this is the reliable way to catch a wrong setup value before signing.
+    await W.signer.call(req);
+    // Get a gas limit the normal way if the network supports it; if not,
+    // fall back to a generous fixed limit — unused gas is always refunded,
+    // so this never costs more, it just skips the flaky estimate.
+    let gasLimit;
+    try { gasLimit = await W.signer.estimateGas(req); gasLimit = gasLimit + gasLimit / 5n; }
+    catch { gasLimit = 10_000_000n; }
+    if (!isTestnet(c) && !confirm(`Deploy ${pkg.name} to ${c.name}? This uses real ${c.symbol} and can't be undone.`)){ out.classList.add("hidden"); return; }
+    show(out, "", "Confirm the deployment in your wallet…");
+    const overrides = { gasLimit, ...(value !== undefined ? { value } : {}) };
+    const contract = await factory.deploy(...args, overrides);
+    const hash = contract.deploymentTransaction().hash;
+    const pending = await contract.getAddress();
+    show(out, "", `Deploying… ${txLink(hash)}\nAddress will be ${pending}`);
+    await contract.waitForDeployment();
+    const address = await contract.getAddress();
+    lastDeployed = { name:pkg.name, address, chainId, abi:pkg.abi, deployedAt:Date.now(), txHash:hash };
+    saveContract(lastDeployed);
+    const u = explorerUrl("address", address, chainId);
+    show(out, "ok", `Deployed on ${esc(c.name)}.\n${address}\n${u ? `<a href="${u}" target="_blank" rel="noopener">View on explorer</a>` : ""}`);
+    $("deployDone").classList.remove("hidden");
+  } catch(e){ show(out, "err", esc(errText(e, pkg && new ethers.Interface(pkg.abi), "deploy"))); }
+  finally { btn.disabled = false; }
+};
+$("openDeployed").onclick = () => { goManage(); openContract(lastDeployed); };
+$("downloadDeployed").onclick = () => downloadContract(lastDeployed);
+
+/* ---------- saved contracts ---------- */
+function saved(){ return store.get("console.contracts", []); }
+function saveContract(c){
+  const list = saved().filter(x => !(same(x.address, c.address) && x.chainId === c.chainId));
+  store.set("console.contracts", [c, ...list].slice(0, 50));
+}
+const same = (a,b) => a && b && a.toLowerCase() === b.toLowerCase();
+function renderSaved(){
+  const list = saved().filter(x => x.chainId === W.chainId);
+  $("savedList").innerHTML = list.map((c,i) =>
+    `<li><button data-open="${esc(c.address)}"><span class="nm">${esc(c.name || "Contract")}</span><span class="sub">${short(c.address)}</span><span class="tag">${c.deployedAt ? new Date(c.deployedAt).toLocaleDateString() : ""}</span></button></li>`).join("");
+  $("savedEmpty").classList.toggle("hidden", list.length > 0);
+  if (!W.chainId){ $("savedEmpty").textContent = "Connect your wallet to see contracts for its network."; $("savedEmpty").classList.remove("hidden"); }
+  else $("savedEmpty").textContent = `Nothing saved for ${chainInfo(W.chainId).name} yet.`;
+}
+$("savedList").onclick = e => {
+  const b = e.target.closest("[data-open]"); if (!b) return;
+  const c = saved().find(x => same(x.address, b.dataset.open) && x.chainId === W.chainId);
+  if (c) openContract(c);
+};
+async function downloadContract(c){
+  const data = JSON.stringify({ name:c.name, address:c.address, chainId:c.chainId, network:chainInfo(c.chainId).name, abi:c.abi }, null, 2);
+  const fname = `${(c.name || "contract").replace(/\W+/g,"-")}-${chainInfo(c.chainId).name.replace(/\W+/g,"-")}.json`;
+  const file = new File([data], fname, { type:"application/json" });
+  // Phones (especially in-app wallet browsers) often can't download; offer the share sheet instead.
+  if (/Android|iPhone|iPad/i.test(navigator.userAgent) && navigator.canShare && navigator.canShare({ files:[file] })){
+    try { await navigator.share({ files:[file], title:fname }); return; } catch(e){ if (e.name === "AbortError") return; }
+  }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = fname;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast(`Saved ${fname}`);
+}
+
+/* ---------- open contract ---------- */
+let pendingOpen = null, current = null;
+wireDrop($("openDrop"), $("openFile"), async files => {
+  try{
+    const p = await parseFiles(files);
+    if (p.address && ethers.isAddress(p.address)){
+      const chainId = p.chainId || W.chainId;
+      if (!chainId){ toast("Connect your wallet first so I know which network this contract is on."); return; }
+      if (W.chainId && chainId !== W.chainId){
+        toast(`This contract is on ${chainInfo(chainId).name}. Switching your wallet…`);
+        await switchTo(chainInfo(chainId));
+      }
+      const c = { name:p.name, address:ethers.getAddress(p.address.toLowerCase()), chainId, abi:p.abi };
+      saveContract(c); openContract(c); return;
+    }
+    pendingOpen = p;
+    $("oName").textContent = p.name || "Contract";
+    $("oMeta").textContent = `${p.abi.filter(x => x.type === "function").length} functions · needs an address`;
+    $("openNeedsAddr").classList.remove("hidden"); $("oAddr").focus();
+  } catch(e){ toast(e.message); }
+});
+$("oOpen").onclick = async () => {
+  const a = $("oAddr").value.trim();
+  if (!ethers.isAddress(a)){ toast("That isn't a valid contract address."); return; }
+  try { await ensureWallet(); } catch(e){ toast(e.message); return; }
+  const code = await W.provider.getCode(a).catch(() => "0x");
+  if (code === "0x"){ toast(`No contract at that address on ${chainInfo(W.chainId).name}. Check the address or switch network.`); return; }
+  const c = { name:pendingOpen.name, address:ethers.getAddress(a.toLowerCase()), chainId:W.chainId, abi:pendingOpen.abi };
+  saveContract(c); pendingOpen = null; $("openNeedsAddr").classList.add("hidden"); $("oAddr").value = "";
+  openContract(c);
+};
+
+function sig(f){ return ethers.FunctionFragment.from(f).format("sighash"); }
+const isRead = f => f.stateMutability === "view" || f.stateMutability === "pure" || f.constant;
+function fnCard(f, i, kind){
+  const key = `${kind}${i}`;
+  const fields = (f.inputs || []).map((inp,j) => inputField(inp, key, j)).join("") + (f.stateMutability === "payable" ? valueField(key) : "");
+  const action = kind === "r" ? `<button class="btn small" data-run="${key}">Look up</button>` : `<button class="btn write" data-run="${key}">Sign and send</button>`;
+  return `<details class="fn" data-name="${esc(f.name.toLowerCase())}">
+    <summary>${esc(f.name)}${f.stateMutability === "payable" ? '<span class="pay">sends funds</span>' : ""}<span class="val" id="val-${key}"></span></summary>
+    <div class="body">${fields}${action}<div class="out hidden" id="out-${key}"></div></div></details>`;
+}
+let fnIndex = {};
+function openContract(c){
+  current = c;
+  $("pickCard").classList.add("hidden"); $("openCard").classList.add("hidden"); $("ctrView").classList.remove("hidden");
+  $("cName").textContent = c.name || "Contract";
+  $("cAddr").textContent = `${c.address} · ${chainInfo(c.chainId).name}`;
+  const fns = c.abi.filter(x => x.type === "function");
+  const writes = fns.filter(f => !isRead(f)).sort((a,b) => a.name.localeCompare(b.name));
+  const reads = fns.filter(isRead).sort((a,b) => a.name.localeCompare(b.name));
+  fnIndex = {};
+  writes.forEach((f,i) => fnIndex["w"+i] = f); reads.forEach((f,i) => fnIndex["r"+i] = f);
+  $("writeList").innerHTML = writes.map((f,i) => fnCard(f,i,"w")).join("") || `<p class="empty">This contract has nothing to change.</p>`;
+  $("readList").innerHTML = reads.map((f,i) => fnCard(f,i,"r")).join("") || `<p class="empty">Nothing to look up.</p>`;
+  $("fnSearch").value = "";
+  // quick values for no-input reads
+  refreshQuick();
+  window.scrollTo({ top:0 });
+}
+function closeContract(){
+  current = null; $("ctrView").classList.add("hidden"); $("pickCard").classList.remove("hidden"); $("openCard").classList.remove("hidden"); renderSaved();
+}
+$("cBack").onclick = closeContract;
+$("cExplorer").onclick = () => { const u = explorerUrl("address", current.address, current.chainId); u ? window.open(u, "_blank", "noopener") : toast("No explorer set for this network."); };
+$("cDownload").onclick = () => downloadContract(current);
+$("cForget").onclick = () => {
+  if (!confirm("Remove this contract from the list? It stays on the blockchain; this only clears it from this browser.")) return;
+  store.set("console.contracts", saved().filter(x => !(same(x.address, current.address) && x.chainId === current.chainId)));
+  closeContract();
+};
+$("fnSearch").oninput = () => {
+  const q = $("fnSearch").value.trim().toLowerCase();
+  document.querySelectorAll("#ctrView details.fn").forEach(d => d.classList.toggle("hidden", q && !d.dataset.name.includes(q)));
+};
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-run]"); if (!b || b.disabled) return;
+  if (b.dataset.run[0] === "w") b.disabled = true;
+  run(b.dataset.run);
+});
+
+async function run(key, quiet){
+  const f = fnIndex[key], out = $("out-"+key), kind = key[0];
+  if (!f || !current) return;
+  try{
+    const args = collect(key, f.inputs || []);
+    if (kind === "r"){
+      const rp = readProvider();
+      if (!rp){ if (quiet) return; throw new Error(`Connect your wallet on ${chainInfo(current.chainId).name} to look this up.`); }
+      const c = new ethers.Contract(current.address, current.abi, rp);
+      const res = await c.getFunction(sig(f)).staticCall(...args);
+      const txt = fmtOut(res);
+      if (quiet){ $("val-"+key).textContent = "= " + txt; return; }
+      show(out, "ok", esc(txt));
+      if (!(f.inputs||[]).length) $("val-"+key).textContent = "= " + txt;
+    } else {
+      await ensureWallet();
+      if (W.chainId !== current.chainId) throw new Error(`Switch your wallet to ${chainInfo(current.chainId).name} first.`);
+      const c = new ethers.Contract(current.address, current.abi, W.signer);
+      const value = f.stateMutability === "payable" ? collectValue(key) : undefined;
+      const fn = c.getFunction(sig(f));
+      const callOverrides = value !== undefined ? [{ value }] : [];
+      show(out, "", "Checking…");
+      // eth_call, not eth_estimateGas: reliably decodes a revert on networks
+      // where the gas estimate itself returns no data.
+      await fn.staticCall(...args, ...callOverrides);
+      let gasLimit;
+      try { gasLimit = await fn.estimateGas(...args, ...callOverrides); gasLimit = gasLimit + gasLimit / 5n; }
+      catch { gasLimit = 3_000_000n; } // generous fallback; unused gas is refunded
+      show(out, "", "Confirm in your wallet…");
+      const tx = await fn(...args, { gasLimit, ...(value !== undefined ? { value } : {}) });
+      show(out, "", `Sent. Waiting for confirmation… ${txLink(tx.hash)}`);
+      await tx.wait();
+      show(out, "ok", `Done. ${txLink(tx.hash)}`);
+      refreshQuick();
+    }
+  } catch(e){
+    if (quiet){ $("val-"+key).textContent = ""; return; }
+    show(out, "err", esc(errText(e, new ethers.Interface(current.abi))));
+  } finally {
+    const b = document.querySelector(`[data-run="${key}"]`); if (b) b.disabled = false;
+  }
+}
+const rpcCache = {};
+function readProvider(){
+  if (!current) return null;
+  if (W.provider && W.chainId === current.chainId) return W.provider;
+  const c = chainInfo(current.chainId);
+  if (!c.rpc) return null;
+  return rpcCache[c.id] ||= new ethers.JsonRpcProvider(c.rpc, c.id, { staticNetwork:true });
+}
+function refreshQuick(){
+  if (!current) return;
+  Object.keys(fnIndex).filter(k => k[0]==="r" && !(fnIndex[k].inputs||[]).length).forEach(k => run(k, true));
+}
+
+/* ---------- tabs ---------- */
+function goDeploy(){ $("tabDeploy").setAttribute("aria-selected","true"); $("tabManage").setAttribute("aria-selected","false"); $("viewDeploy").classList.remove("hidden"); $("viewManage").classList.add("hidden"); }
+function goManage(){ $("tabManage").setAttribute("aria-selected","true"); $("tabDeploy").setAttribute("aria-selected","false"); $("viewManage").classList.remove("hidden"); $("viewDeploy").classList.add("hidden"); renderSaved(); }
+$("tabDeploy").onclick = goDeploy; $("tabManage").onclick = goManage;
+
+renderTop(); renderSaved();
+</script>
+</body>
+</html>
